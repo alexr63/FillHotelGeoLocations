@@ -9,43 +9,83 @@ namespace FillHotelGeoLocations
 {
     class Program
     {
+        private static readonly log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
         static void Main(string[] args)
         {
+            log.Info("FillHotelGeoLocations started");
+
             const int englandLocationId = 6269131;
 
             using (SelectedHotelsEntities db = new SelectedHotelsEntities())
             {
-                var hotels = db.Products.OfType<Hotel>().Where(h => h.GeoLocationId != null);
-                foreach (Hotel hotel in hotels.ToList())
+                var query = db.Products.OfType<Hotel>().Where(h => h.GeoLocationId != null);
+                var hotels = query.ToList();
+                Console.WriteLine(hotels.Count);
+                foreach (Hotel hotel in hotels)
                 {
+                    Console.WriteLine(hotels.IndexOf(hotel));
+
                     int currentGeoLocationId = hotel.GeoLocationId.Value;
-                    while (currentGeoLocationId != englandLocationId)
+
+                    var geoName = db.GeoNames.Find(currentGeoLocationId);
+                    if (geoName == null)
                     {
-                        var geoName = db.GeoNames.Find(currentGeoLocationId);
-                        if (geoName == null)
-                        {
-                            break;
-                        }
+                        log.Info(String.Format("GeoName {0} is not found for hotel {1}.", currentGeoLocationId, hotel.Id));
+                        continue;
+                    }
 
-                        HotelGeoLocation hotelGeoLocation = new HotelGeoLocation();
-                        hotelGeoLocation.HotelId = hotel.Id;
-                        hotelGeoLocation.LocationId = currentGeoLocationId;
-                        hotelGeoLocation.HotelTypeId = hotel.HotelTypeId;
-                        db.HotelGeoLocations.Add(hotelGeoLocation);
-
-                        var hierarchy = db.Hierarchies.SingleOrDefault(h => h.ChildId == currentGeoLocationId);
-                        if (hierarchy != null)
+                    AddHotelGeoLocation(hotel, currentGeoLocationId, db);
+                    var hierarchy = db.Hierarchies.SingleOrDefault(h => h.ChildId == currentGeoLocationId);
+                    if (hierarchy != null)
+                    {
+                        if (!String.IsNullOrEmpty(hierarchy.Lineage))
                         {
-                            currentGeoLocationId = hierarchy.ParentId;
+                            string[] parents = hierarchy.Lineage.Split('/');
+                            foreach (string parent in parents)
+                            {
+                                if (Common.Utils.IsNumeric(parent))
+                                {
+                                    currentGeoLocationId = int.Parse(parent);
+                                    geoName = db.GeoNames.Find(currentGeoLocationId);
+                                    if (geoName == null)
+                                    {
+                                        log.Info(String.Format("GeoName {0} is not found for hotel {1}.", currentGeoLocationId, hotel.Id));
+                                        continue;
+                                    }
+                                    AddHotelGeoLocation(hotel, currentGeoLocationId, db);
+                                }
+                                else
+                                {
+                                    log.Info(String.Format("Parent {0} is not numberic.", parent));
+                                }
+                            }
                         }
                         else
                         {
-                            currentGeoLocationId = englandLocationId;
+                            log.Info(String.Format("Linear is empty for hierarchy {0}.", hierarchy.Id));
                         }
                     }
-                    db.SaveChanges();
+                    else
+                    {
+                        log.Info(String.Format("Hierarchy {0} is not found for hotel {1}.", currentGeoLocationId, hotel.Id));
+                    }
+                    if (hotels.IndexOf(hotel)%10 == 0)
+                    {
+                        db.SaveChanges();
+                    }
                 }
+                db.SaveChanges();
             }
+        }
+
+        private static void AddHotelGeoLocation(Hotel hotel, int currentGeoLocationId, SelectedHotelsEntities db)
+        {
+            HotelGeoLocation hotelGeoLocation = new HotelGeoLocation();
+            hotelGeoLocation.HotelId = hotel.Id;
+            hotelGeoLocation.LocationId = currentGeoLocationId;
+            hotelGeoLocation.HotelTypeId = hotel.HotelTypeId;
+            db.HotelGeoLocations.Add(hotelGeoLocation);
         }
     }
 }

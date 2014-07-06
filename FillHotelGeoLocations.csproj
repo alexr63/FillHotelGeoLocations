@@ -38,6 +38,9 @@
     <Reference Include="EntityFramework.SqlServer">
       <HintPath>..\..\..\Home\Cowrie\selectedhot.local\DesktopModules\ProductList\packages\EntityFramework.6.0.2\lib\net45\EntityFramework.SqlServer.dll</HintPath>
     </Reference>
+    <Reference Include="log4net">
+      <HintPath>..\..\..\Home\Cowrie\selectedhot.local\DesktopModules\ProductList\packages\log4net.2.0.3\lib\net40-full\log4net.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
@@ -56,10 +59,17 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Common\Common.csproj">
+      <Project>{17f13398-02f4-43e3-9343-1191c2372cc9}</Project>
+      <Name>Common</Name>
+    </ProjectReference>
     <ProjectReference Include="..\SelectedHotelsModel\SelectedHotelsModel.csproj">
       <Project>{58ed5699-0ce6-4868-9876-f99d40899857}</Project>
       <Name>SelectedHotelsModel</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
