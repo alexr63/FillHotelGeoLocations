@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using FillHotelGeoLocations.Properties;
+using NGeo.GeoNames;
 using SelectedHotelsModel;
 
 namespace FillHotelGeoLocations
@@ -18,6 +20,7 @@ namespace FillHotelGeoLocations
             const int englandLocationId = 6269131;
 
             using (SelectedHotelsEntities db = new SelectedHotelsEntities())
+            using (var geoNames = new GeoNamesClient())
             {
                 var query = db.Products.OfType<Hotel>().Where(h => h.GeoLocationId != null);
                 var hotels = query.ToList();
@@ -63,12 +66,22 @@ namespace FillHotelGeoLocations
                         }
                         else
                         {
-                            log.Info(String.Format("Linear is empty for hierarchy {0}.", hierarchy.Id));
+                            log.Info(String.Format("Lineage is empty for hierarchy {0}.", hierarchy.Id));
                         }
                     }
                     else
                     {
                         log.Info(String.Format("Hierarchy {0} is not found for hotel {1}.", currentGeoLocationId, hotel.Id));
+                        log.Info(String.Format("Finding {0} via geonames.com service.", currentGeoLocationId));
+                        var results = geoNames.Hierarchy(currentGeoLocationId, Settings.Default.GeoNamesUserName, ResultStyle.Full);
+                        foreach (Toponym toponym in results.Reverse().Skip(1))
+                        {
+                            AddHotelGeoLocation(hotel, toponym.GeoNameId, db);
+                            if (toponym.GeoNameId == englandLocationId)
+                            {
+                                break;
+                            }
+                        }
                     }
                     if (hotels.IndexOf(hotel)%10 == 0)
                     {
